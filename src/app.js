@@ -3,6 +3,8 @@ require("./config/database");
 const cookieParser = require("cookie-parser");
 const jwt = require("jsonwebtoken"); // For generating JWT tokens
 const { auth } = require("./Middlewares/auth"); // Importing the auth middleware
+const authRouter = require("./routes/authRouter"); // Importing the authentication routes
+const profileRouter = require("./routes/profileRouter"); // Importing the profile routes
 
 const app = express();
 const { validateSignupData } = require("./utils/validation");
@@ -15,51 +17,8 @@ app.use(express.json());
 // Middleware to parse JSON request bodies
 app.use(cookieParser());
 
-app.post("/signup", async (req, res) => {
-  const { name, email, password } = req.body;
-  const hashpassword = await bcrypt.hash(password, 10);
-  const userdata = new User({
-    ...req.body,
-    password: hashpassword,
-  });
-  console.log("Hashed password:", hashpassword);
-  try {
-    validateSignupData(req);
-    await userdata.save();
-    res.send("User data saved successfully");
-  } catch (err) {
-    res.status(400).send("Error saving user data" + err);
-  }
-});
-
-// Middleware to handle errors globally
-// Login route
-app.post("/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email: email });
-    if (!user) {
-      throw new Error("Invalid credentials1");
-    }
-    const isMatch = await user.validatekrobhai(password);
-    if (!isMatch) {
-      throw new Error("Invalid credentials2");
-    } else {
-      const token = await user.getJWT();
-      console.log("Generated token:", token);
-      res.cookie("token", token, {
-        expires: new Date(Date.now() + 12 * 60 * 1000),
-      });
-      res.send("Login successful");
-    }
-  } catch (err) {
-    res.status(400).send("Error logging in: " + err.message);
-  }
-});
-
-app.get("/profile", auth, async (req, res) => {
-  res.send(await User.findOne({ email: req.body.email }));
-});
+app.use("/", authRouter);
+app.use("/", profileRouter);
 
 // app.get("/user", async (req, res) => {
 //   const name = req.body.name;
@@ -88,29 +47,29 @@ app.get("/profile", auth, async (req, res) => {
 //   }
 // });
 
-app.patch("/user/:_id", async (req, res) => {
-  try {
-    const updatekrlo = ["name", "bio", "email"];
-    const isValidUpdate = Object.keys(req.body).every((key) =>
-      updatekrlo.includes(key)
-    );
-    if (req.body.name === "ramu aka") {
-      throw new Error("Name cannot be ramu aka   chalo bhago !");
-    }
-    if (!isValidUpdate) {
-      return res.status(400).send("Invalid update fields");
-    }
-    const eid = req.params?._id;
-    const data = req.body;
-    const updatedUser = await User.findByIdAndUpdate(eid, data, {
-      new: true, // Return the updated document
-      runValidators: true, // Ensure that the update respects the schema validation
-    });
-    res.send("all is ok " + updatedUser);
-  } catch (err) {
-    res.status(400).send("Error updating user data: " + err.message);
-  }
-});
+// app.patch("/user/:_id", async (req, res) => {
+//   try {
+//     const updatekrlo = ["name", "bio", "email"];
+//     const isValidUpdate = Object.keys(req.body).every((key) =>
+//       updatekrlo.includes(key)
+//     );
+//     if (req.body.name === "ramu aka") {
+//       throw new Error("Name cannot be ramu aka   chalo bhago !");
+//     }
+//     if (!isValidUpdate) {
+//       return res.status(400).send("Invalid update fields");
+//     }
+//     const eid = req.params?._id;
+//     const data = req.body;
+//     const updatedUser = await User.findByIdAndUpdate(eid, data, {
+//       new: true, // Return the updated document
+//       runValidators: true, // Ensure that the update respects the schema validation
+//     });
+//     res.send("all is ok " + updatedUser);
+//   } catch (err) {
+//     res.status(400).send("Error updating user data: " + err.message);
+//   }
+// });
 
 connectDB()
   .then(() => {
